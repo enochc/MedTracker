@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MedTracker</string>
+    <string name="widget_name">Medication Tracker</string>
+    <string name="widget_description">Track and log your medication with a single tap. Shows when you last took it.</string>
+</resources>
