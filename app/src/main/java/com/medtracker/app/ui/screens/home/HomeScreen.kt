@@ -1,5 +1,6 @@
 package com.medtracker.app.ui.screens.home
 
+import android.content.Context
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddHome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -42,16 +44,24 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.medtracker.app.data.entity.MedicationWithLastLog
 import com.medtracker.app.ui.components.formatTimeAgo
+import com.medtracker.app.widget.MedTrackerWidget
+import com.medtracker.app.widget.MedTrackerWidgetReceiver
+import com.medtracker.app.widget.WidgetKeys
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -180,6 +190,8 @@ private fun MedicationCard(
     onTake: () -> Unit
 ) {
     val med = medWithLog.medication
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -220,6 +232,17 @@ private fun MedicationCard(
                     }
                 }
                 Row {
+                    IconButton(onClick = {
+                        scope.launch {
+                            pinWidget(context, medWithLog)
+                        }
+                    }) {
+                        Icon(
+                            Icons.Default.AddHome,
+                            contentDescription = "Pin to Home",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     IconButton(onClick = onEdit) {
                         Icon(
                             Icons.Default.Edit,
@@ -293,6 +316,31 @@ private fun MedicationCard(
             }
         }
     }
+}
+
+private suspend fun pinWidget(context: Context, medWithLog: MedicationWithLastLog) {
+    val manager = GlanceAppWidgetManager(context)
+    val med = medWithLog.medication
+    
+    // Create initial state for the pinned widget
+    val initialState = androidx.datastore.preferences.core.preferencesOf(
+        WidgetKeys.MEDICATION_ID to med.id,
+        WidgetKeys.MEDICATION_NAME to med.name,
+        WidgetKeys.MEDICATION_DOSAGE to med.dosage
+    ).toMutablePreferences()
+    
+    if (medWithLog.lastTakenAt != null) {
+        initialState[WidgetKeys.LAST_TAKEN_AT] = medWithLog.lastTakenAt
+    }
+    if (medWithLog.lastAmount != null) {
+        initialState[WidgetKeys.LAST_AMOUNT] = medWithLog.lastAmount
+    }
+
+    manager.requestPinGlanceAppWidget(
+        receiver = MedTrackerWidgetReceiver::class.java,
+        preview = MedTrackerWidget(),
+        previewState = initialState
+    )
 }
 
 @Composable
