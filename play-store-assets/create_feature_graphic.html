@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MedTracker Feature Graphic Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 40px;
+            background: #f5f5f5;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin: 20px auto;
+            display: block;
+            background: white;
+            max-width: 100%;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        .info {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>MedTracker Feature Graphic Generator</h1>
+    <canvas id="featureGraphic" width="1024" height="500"></canvas>
+    <br>
+    <button onclick="downloadGraphic()">Download feature-graphic-1024x500.png</button>
+
+    <div class="info">
+        <h3>Instructions:</h3>
+        <ol>
+            <li>Click the "Download" button to save the 1024x500 feature graphic</li>
+            <li>This is the header image displayed at the top of your Play Store listing</li>
+            <li>File format: PNG or JPEG</li>
+        </ol>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('featureGraphic');
+        const ctx = canvas.getContext('2d');
+
+        function drawFeatureGraphic() {
+            // Clear canvas
+            ctx.clearRect(0, 0, 1024, 500);
+
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, 1024, 500);
+            gradient.addColorStop(0, '#2196F3');
+            gradient.addColorStop(0.5, '#1976D2');
+            gradient.addColorStop(1, '#1565C0');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 1024, 500);
+
+            // Pill emoji (left side)
+            ctx.font = '180px Arial';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('💊', 80, 250);
+
+            // App name (center-right)
+            ctx.font = 'bold 80px Arial';
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'left';
+            ctx.fillText('MedTracker', 320, 200);
+
+            // Tagline
+            ctx.font = '36px Arial';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fillText('Track Your Medications with Ease', 320, 280);
+
+            // Features
+            ctx.font = '24px Arial';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.fillText('✓ Home Screen Widgets', 320, 340);
+            ctx.fillText('✓ Quick Logging', 320, 380);
+            ctx.fillText('✓ History Tracking', 320, 420);
+        }
+
+        function downloadGraphic() {
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'feature-graphic-1024x500.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        // Draw on load
+        drawFeatureGraphic();
+    </script>
+</body>
+</html>

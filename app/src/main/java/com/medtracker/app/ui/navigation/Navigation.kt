@@ -82,6 +82,9 @@ fun MedTrackerNavHost(navController: NavHostController) {
                             popUpTo(Routes.HOME) { inclusive = true }
                         }
                     }
+                },
+                onViewHistory = { medId ->
+                    navController.navigate(Routes.history(medId))
                 }
             )
         }

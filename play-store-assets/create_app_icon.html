@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MedTracker App Icon Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 40px;
+            background: #f5f5f5;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin: 20px auto;
+            display: block;
+            background: white;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        .info {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>MedTracker App Icon Generator</h1>
+    <canvas id="icon" width="512" height="512"></canvas>
+    <br>
+    <button onclick="downloadIcon()">Download app-icon-512.png</button>
+
+    <div class="info">
+        <h3>Instructions:</h3>
+        <ol>
+            <li>Click the "Download" button to save the 512x512 app icon</li>
+            <li>This file is required for Google Play Store submission</li>
+            <li>File format: 32-bit PNG with alpha channel</li>
+        </ol>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('icon');
+        const ctx = canvas.getContext('2d');
+
+        function drawIcon() {
+            // Clear canvas
+            ctx.clearRect(0, 0, 512, 512);
+
+            // Background gradient (medical blue)
+            const gradient = ctx.createLinearGradient(0, 0, 512, 512);
+            gradient.addColorStop(0, '#2196F3');
+            gradient.addColorStop(1, '#1976D2');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 512, 512);
+
+            // Draw pill emoji
+            ctx.font = '320px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('💊', 256, 256);
+
+            // Optional: Add app name at bottom
+            ctx.font = 'bold 48px Arial';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fillText('MedTracker', 256, 460);
+        }
+
+        function downloadIcon() {
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'app-icon-512.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        // Draw on load
+        drawIcon();
+    </script>
+</body>
+</html>

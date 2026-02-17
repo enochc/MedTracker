@@ -1,0 +1,19 @@
+Version 1.0.0 - Initial Release
+
+Welcome to MedTracker! This is the first release of our simple, privacy-focused medication tracking app.
+
+✨ Features:
+• Quick-access home screen widgets - track medications with a single tap
+• Pre-filled medication amounts for effortless logging
+• Complete medication history with timestamps
+• Beautiful, modern interface with dark mode support
+• No account required - all data stays on your device
+• No ads, no tracking, completely free
+
+🔒 Privacy First:
+All your medication data is stored locally on your device. We don't collect any personal information or track your usage.
+
+💊 Simple & Fast:
+Designed for daily use with minimal friction. Add your medications, place widgets on your home screen, and log doses with just two taps.
+
+Thank you for choosing MedTracker!
