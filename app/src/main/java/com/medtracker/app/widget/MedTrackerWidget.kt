@@ -33,8 +33,10 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.room.Room
 import com.medtracker.app.data.database.MedTrackerDatabase
-import com.medtracker.app.ui.components.formatTimeAgo
 import com.medtracker.app.MainActivity
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 // Preference keys for widget state
 object WidgetKeys {
@@ -145,7 +147,9 @@ class MedTrackerWidget : GlanceAppWidget() {
 
                 // Last taken time
                 Text(
-                    text = if (lastTakenAt != null) formatTimeAgo(lastTakenAt) else "Never",
+                    text = if (lastTakenAt != null) {
+                        SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(lastTakenAt))
+                    } else "Never",
                     style = TextStyle(
                         fontSize = 10.sp,
                         color = ColorProvider(Color(0xFFCCCCCC))
