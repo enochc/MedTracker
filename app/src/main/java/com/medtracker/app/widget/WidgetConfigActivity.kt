@@ -128,12 +128,12 @@ class WidgetConfigActivity : ComponentActivity() {
         }
 
         // Check if there's a pending medication from the "Pin to Home" flow
-//        val pending = consumePendingMedication(this)
-//        if (pending != null) {
-//            // Auto-configure with the medication that was selected in the app
-//            configureWidgetFromPending(appWidgetId, pending)
-//            return
-//        }
+        val pending = consumePendingMedication(this)
+        if (pending != null) {
+            // Auto-configure with the medication that was selected in the app
+            configureWidgetFromPending(appWidgetId, pending)
+            return
+        }
 
         setContent {
             MedTrackerTheme {

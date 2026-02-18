@@ -34,6 +34,9 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.room.Room
 import com.medtracker.app.data.database.MedTrackerDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -241,4 +244,53 @@ class OpenConfigAction : ActionCallback {
 
 class MedTrackerWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = MedTrackerWidget()
+
+//    override fun onReceive(context: Context, intent: Intent) {
+//        super.onReceive(context, intent)
+//        if (intent.action == "com.medtracker.app.ACTION_WIDGET_PINNED") {
+//            val appWidgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1)
+//            val medId = intent.getLongExtra("med_id", -1L)
+//
+//            if (appWidgetId != -1 && medId != -1L) {
+//                CoroutineScope(Dispatchers.IO).launch {
+//                    val manager = GlanceAppWidgetManager(context)
+//                    val glanceId = manager.getGlanceIdBy(appWidgetId)
+//                    updateAppWidgetState(context, glanceId) { prefs ->
+//                        prefs[WidgetKeys.MEDICATION_ID] = medId
+//                    }
+//                    glanceAppWidget.update(context, glanceId)
+//                }
+//            }
+//        }
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+        if (intent.action == "com.medtracker.app.ACTION_WIDGET_PINNED") {
+            val appWidgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1)
+            val medId = intent.getLongExtra("med_id", -1L)
+
+            if (appWidgetId != -1 && medId != -1L) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    val db = Room.databaseBuilder(
+                        context, MedTrackerDatabase::class.java, "medtracker.db"
+                    ).build()
+
+                    val med = db.medicationDao().getMedicationById(medId)
+                    db.close()
+
+                    val manager = GlanceAppWidgetManager(context)
+                    val glanceId = manager.getGlanceIdBy(appWidgetId)
+
+                    updateAppWidgetState(context, glanceId) { prefs ->
+                        prefs[WidgetKeys.MEDICATION_ID] = medId
+                        // Set labels immediately so the first render isn't blank/generic
+                        if (med != null) {
+                            prefs[WidgetKeys.MEDICATION_NAME] = med.name
+                            prefs[WidgetKeys.MEDICATION_DOSAGE] = med.dosage
+                        }
+                    }
+                    glanceAppWidget.update(context, glanceId)
+                }
+            }
+        }
+    }
 }

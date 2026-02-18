@@ -1,9 +1,10 @@
 package com.medtracker.app.ui.screens.home
 
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,8 +52,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.datastore.preferences.core.preferencesOf
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,7 +61,6 @@ import com.medtracker.app.data.entity.MedicationWithLastLog
 import com.medtracker.app.ui.components.formatTimeAgo
 import com.medtracker.app.widget.MedTrackerWidget
 import com.medtracker.app.widget.MedTrackerWidgetReceiver
-import com.medtracker.app.widget.WidgetConfigActivity
 import com.medtracker.app.widget.WidgetKeys
 import kotlinx.coroutines.launch
 
@@ -323,34 +323,31 @@ private suspend fun pinWidget(context: Context, medWithLog: MedicationWithLastLo
     val manager = GlanceAppWidgetManager(context)
     val med = medWithLog.medication
 
-    // Store the pending medication so WidgetConfigActivity auto-configures
-    WidgetConfigActivity.setPendingMedication(
-        context = context,
-        medId = med.id,
-        medName = med.name,
-        medDosage = med.dosage,
-        lastTakenAt = medWithLog.lastTakenAt,
-        lastAmount = medWithLog.lastAmount
+    // Create a callback that runs once the widget is pinned
+    val successCallback = Intent(context, MedTrackerWidgetReceiver::class.java).apply {
+        action = "com.medtracker.app.ACTION_WIDGET_PINNED"
+        putExtra("med_id", med.id)
+    }
+
+    val pendingIntent = PendingIntent.getBroadcast(
+        context,
+        med.id.toInt(),
+        successCallback,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
     )
 
     // Create initial state for the pinned widget preview
-    val initialState = androidx.datastore.preferences.core.preferencesOf(
+    val previewState = preferencesOf(
         WidgetKeys.MEDICATION_ID to med.id,
         WidgetKeys.MEDICATION_NAME to med.name,
         WidgetKeys.MEDICATION_DOSAGE to med.dosage
-    ).toMutablePreferences()
-
-    if (medWithLog.lastTakenAt != null) {
-        initialState[WidgetKeys.LAST_TAKEN_AT] = medWithLog.lastTakenAt
-    }
-    if (medWithLog.lastAmount != null) {
-        initialState[WidgetKeys.LAST_AMOUNT] = medWithLog.lastAmount
-    }
+    )
 
     manager.requestPinGlanceAppWidget(
         receiver = MedTrackerWidgetReceiver::class.java,
         preview = MedTrackerWidget(),
-        previewState = initialState
+        previewState = previewState,
+        successCallback = pendingIntent
     )
 }
 
