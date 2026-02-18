@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.text.format.DateUtils
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -32,6 +33,7 @@ import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.text.TextAlign
 import androidx.room.Room
 import com.medtracker.app.data.database.MedTrackerDatabase
 import kotlinx.coroutines.CoroutineScope
@@ -143,7 +145,7 @@ class MedTrackerWidget : GlanceAppWidget() {
             Text(
                 text = "\uD83D\uDC8A",
                 style = TextStyle(
-                    fontSize = 24.sp
+                    fontSize = 28.sp
                 )
             )
 
@@ -153,8 +155,9 @@ class MedTrackerWidget : GlanceAppWidget() {
                     text = medName,
                     style = TextStyle(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        color = ColorProvider(Color(0xFFEEEEEE))
+                        fontSize = 14.sp,
+                        color = ColorProvider(Color(0xFFEEEEEE)),
+                        textAlign = TextAlign.Center
                     ),
                     maxLines = 1
                 )
@@ -162,41 +165,56 @@ class MedTrackerWidget : GlanceAppWidget() {
                 // Last taken time
                 Text(
                     text = if (lastTakenAt != null) {
-                        val diff = System.currentTimeMillis() - lastTakenAt
-                        val dayMs = 24 * 60 * 60 * 1000L
+                        val now = System.currentTimeMillis()
+                        val timeStr = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(lastTakenAt))
+                        
                         when {
-                            diff < dayMs -> SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(lastTakenAt))
-                            diff < 2 * dayMs -> "Yesterday"
-                            diff < 6 * dayMs -> SimpleDateFormat("EEE h:mm a", Locale.getDefault()).format(Date(lastTakenAt))
-                            else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(lastTakenAt))
+                            DateUtils.isToday(lastTakenAt) -> timeStr
+                            isYesterday(lastTakenAt) -> "Yesterday\n$timeStr"
+                            else -> {
+                                val diff = now - lastTakenAt
+                                val weekMs = 7 * 24 * 60 * 60 * 1000L
+                                if (diff < weekMs) {
+                                    SimpleDateFormat("EEE\nh:mm a", Locale.getDefault()).format(Date(lastTakenAt))
+                                } else {
+                                    SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(lastTakenAt))
+                                }
+                            }
                         }
                     } else "Never",
                     style = TextStyle(
-                        fontSize = 10.sp,
-                        color = ColorProvider(Color(0xFFCCCCCC))
+                        fontSize = 11.sp,
+                        color = ColorProvider(Color(0xFFCCCCCC)),
+                        textAlign = TextAlign.Center
                     ),
-                    maxLines = 1
+                    maxLines = 2
                 )
             } else {
                 Text(
                     text = "Setup",
                     style = TextStyle(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        color = ColorProvider(Color(0xFFEEEEEE))
+                        fontSize = 14.sp,
+                        color = ColorProvider(Color(0xFFEEEEEE)),
+                        textAlign = TextAlign.Center
                     ),
                     maxLines = 1
                 )
                 Text(
                     text = "Tap here",
                     style = TextStyle(
-                        fontSize = 10.sp,
-                        color = ColorProvider(Color(0xFFCCCCCC))
+                        fontSize = 11.sp,
+                        color = ColorProvider(Color(0xFFCCCCCC)),
+                        textAlign = TextAlign.Center
                     ),
                     maxLines = 1
                 )
             }
         }
+    }
+
+    private fun isYesterday(whenMs: Long): Boolean {
+        return DateUtils.isToday(whenMs + DateUtils.DAY_IN_MILLIS)
     }
 }
 
@@ -245,23 +263,6 @@ class OpenConfigAction : ActionCallback {
 class MedTrackerWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = MedTrackerWidget()
 
-//    override fun onReceive(context: Context, intent: Intent) {
-//        super.onReceive(context, intent)
-//        if (intent.action == "com.medtracker.app.ACTION_WIDGET_PINNED") {
-//            val appWidgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1)
-//            val medId = intent.getLongExtra("med_id", -1L)
-//
-//            if (appWidgetId != -1 && medId != -1L) {
-//                CoroutineScope(Dispatchers.IO).launch {
-//                    val manager = GlanceAppWidgetManager(context)
-//                    val glanceId = manager.getGlanceIdBy(appWidgetId)
-//                    updateAppWidgetState(context, glanceId) { prefs ->
-//                        prefs[WidgetKeys.MEDICATION_ID] = medId
-//                    }
-//                    glanceAppWidget.update(context, glanceId)
-//                }
-//            }
-//        }
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action == "com.medtracker.app.ACTION_WIDGET_PINNED") {
