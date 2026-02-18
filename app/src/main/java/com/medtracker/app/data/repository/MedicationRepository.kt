@@ -31,11 +31,19 @@ class MedicationRepository @Inject constructor(
     suspend fun addMedication(medication: Medication): Long =
         dao.insertMedication(medication)
 
-    suspend fun updateMedication(medication: Medication) =
+    suspend fun updateMedication(medication: Medication) {
         dao.updateMedication(medication)
+        // Push name/dosage changes to any widgets tracking this medication
+        WidgetUpdater.pushMedicationUpdate(
+            context, medication.id, medication.name, medication.dosage
+        )
+    }
 
-    suspend fun deleteMedication(medication: Medication) =
+    suspend fun deleteMedication(medication: Medication) {
+        // Remove associated widgets from the home screen before deleting
+        WidgetUpdater.removeWidgetsForMedication(context, medication.id)
         dao.deleteMedication(medication)
+    }
 
     suspend fun logMedication(medicationId: Long, amount: String = "", note: String = ""): Long {
         val takenAt = System.currentTimeMillis()
@@ -47,6 +55,8 @@ class MedicationRepository @Inject constructor(
                 takenAt = takenAt
             )
         )
+        // Prune logs beyond the 50-entry limit for this medication
+        dao.pruneOldLogs(medicationId)
         // Directly push the timestamp to widget state (bypasses database re-query)
         WidgetUpdater.pushLastTaken(context, medicationId, takenAt, amount)
         return id

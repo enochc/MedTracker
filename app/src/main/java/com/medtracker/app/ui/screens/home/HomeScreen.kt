@@ -60,6 +60,7 @@ import com.medtracker.app.data.entity.MedicationWithLastLog
 import com.medtracker.app.ui.components.formatTimeAgo
 import com.medtracker.app.widget.MedTrackerWidget
 import com.medtracker.app.widget.MedTrackerWidgetReceiver
+import com.medtracker.app.widget.WidgetConfigActivity
 import com.medtracker.app.widget.WidgetKeys
 import kotlinx.coroutines.launch
 
@@ -321,14 +322,24 @@ private fun MedicationCard(
 private suspend fun pinWidget(context: Context, medWithLog: MedicationWithLastLog) {
     val manager = GlanceAppWidgetManager(context)
     val med = medWithLog.medication
-    
-    // Create initial state for the pinned widget
+
+    // Store the pending medication so WidgetConfigActivity auto-configures
+    WidgetConfigActivity.setPendingMedication(
+        context = context,
+        medId = med.id,
+        medName = med.name,
+        medDosage = med.dosage,
+        lastTakenAt = medWithLog.lastTakenAt,
+        lastAmount = medWithLog.lastAmount
+    )
+
+    // Create initial state for the pinned widget preview
     val initialState = androidx.datastore.preferences.core.preferencesOf(
         WidgetKeys.MEDICATION_ID to med.id,
         WidgetKeys.MEDICATION_NAME to med.name,
         WidgetKeys.MEDICATION_DOSAGE to med.dosage
     ).toMutablePreferences()
-    
+
     if (medWithLog.lastTakenAt != null) {
         initialState[WidgetKeys.LAST_TAKEN_AT] = medWithLog.lastTakenAt
     }

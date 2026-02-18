@@ -12,19 +12,26 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -40,6 +47,7 @@ fun AddEditMedicationScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val isEditing = medicationId != null
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(medicationId) {
         medicationId?.let { viewModel.loadMedication(it) }
@@ -47,6 +55,38 @@ fun AddEditMedicationScreen(
 
     LaunchedEffect(state.isSaved) {
         if (state.isSaved) onBack()
+    }
+
+    LaunchedEffect(state.isDeleted) {
+        if (state.isDeleted) onBack()
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Medication") },
+            text = {
+                Text("Are you sure you want to delete \"${state.name}\"? This will remove all history and any home screen widgets for this medication.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        viewModel.deleteMedication()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -148,6 +188,24 @@ fun AddEditMedicationScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(if (isEditing) "Update Medication" else "Add Medication")
+            }
+
+            if (isEditing) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedButton(
+                    onClick = { showDeleteDialog = true },
+                    enabled = !state.isLoading,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp, MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete Medication")
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

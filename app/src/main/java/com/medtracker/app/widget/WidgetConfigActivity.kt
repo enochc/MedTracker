@@ -1,6 +1,7 @@
 package com.medtracker.app.widget
 
 import android.appwidget.AppWidgetManager
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -33,7 +34,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -49,6 +49,66 @@ import com.medtracker.app.ui.theme.MedTrackerTheme
 import kotlinx.coroutines.launch
 
 class WidgetConfigActivity : ComponentActivity() {
+
+    companion object {
+        private const val PREFS_NAME = "widget_pending_config"
+        private const val KEY_PENDING_MED_ID = "pending_med_id"
+        private const val KEY_PENDING_MED_NAME = "pending_med_name"
+        private const val KEY_PENDING_MED_DOSAGE = "pending_med_dosage"
+        private const val KEY_PENDING_LAST_TAKEN = "pending_last_taken"
+        private const val KEY_PENDING_LAST_AMOUNT = "pending_last_amount"
+
+        /**
+         * Store a pending medication so the next widget config auto-configures.
+         * Called from HomeScreen's pinWidget before requestPinGlanceAppWidget.
+         */
+        fun setPendingMedication(
+            context: Context,
+            medId: Long,
+            medName: String,
+            medDosage: String,
+            lastTakenAt: Long?,
+            lastAmount: String?
+        ) {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putLong(KEY_PENDING_MED_ID, medId)
+                .putString(KEY_PENDING_MED_NAME, medName)
+                .putString(KEY_PENDING_MED_DOSAGE, medDosage)
+                .apply {
+                    if (lastTakenAt != null) putLong(KEY_PENDING_LAST_TAKEN, lastTakenAt)
+                    else remove(KEY_PENDING_LAST_TAKEN)
+                    if (lastAmount != null) putString(KEY_PENDING_LAST_AMOUNT, lastAmount)
+                    else remove(KEY_PENDING_LAST_AMOUNT)
+                }
+                .apply()
+        }
+
+        fun consumePendingMedication(context: Context): PendingMedConfig? {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val medId = prefs.getLong(KEY_PENDING_MED_ID, 0L)
+            if (medId == 0L) return null
+
+            val config = PendingMedConfig(
+                medId = medId,
+                medName = prefs.getString(KEY_PENDING_MED_NAME, "") ?: "",
+                medDosage = prefs.getString(KEY_PENDING_MED_DOSAGE, "") ?: "",
+                lastTakenAt = if (prefs.contains(KEY_PENDING_LAST_TAKEN)) prefs.getLong(KEY_PENDING_LAST_TAKEN, 0L) else null,
+                lastAmount = prefs.getString(KEY_PENDING_LAST_AMOUNT, null)
+            )
+
+            // Clear pending state
+            prefs.edit().clear().apply()
+            return config
+        }
+    }
+
+    data class PendingMedConfig(
+        val medId: Long,
+        val medName: String,
+        val medDosage: String,
+        val lastTakenAt: Long?,
+        val lastAmount: String?
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,6 +127,14 @@ class WidgetConfigActivity : ComponentActivity() {
             return
         }
 
+        // Check if there's a pending medication from the "Pin to Home" flow
+//        val pending = consumePendingMedication(this)
+//        if (pending != null) {
+//            // Auto-configure with the medication that was selected in the app
+//            configureWidgetFromPending(appWidgetId, pending)
+//            return
+//        }
+
         setContent {
             MedTrackerTheme {
                 ConfigScreen(
@@ -79,25 +147,50 @@ class WidgetConfigActivity : ComponentActivity() {
         }
     }
 
+    private fun configureWidgetFromPending(appWidgetId: Int, pending: PendingMedConfig) {
+        val context = this
+
+        kotlinx.coroutines.MainScope().launch {
+            val manager = GlanceAppWidgetManager(context)
+            val glanceId = manager.getGlanceIdBy(appWidgetId)
+
+            updateAppWidgetState(context, glanceId) { prefs ->
+                prefs[WidgetKeys.MEDICATION_ID] = pending.medId
+                prefs[WidgetKeys.MEDICATION_NAME] = pending.medName
+                prefs[WidgetKeys.MEDICATION_DOSAGE] = pending.medDosage
+                if (pending.lastTakenAt != null) {
+                    prefs[WidgetKeys.LAST_TAKEN_AT] = pending.lastTakenAt
+                }
+                if (pending.lastAmount != null) {
+                    prefs[WidgetKeys.LAST_AMOUNT] = pending.lastAmount
+                }
+            }
+
+            MedTrackerWidget().updateAll(context)
+
+            val resultValue = Intent().putExtra(
+                AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId
+            )
+            setResult(RESULT_OK, resultValue)
+            finish()
+        }
+    }
+
     private fun configureWidget(appWidgetId: Int, medication: Medication) {
         val context = this
 
         kotlinx.coroutines.MainScope().launch {
-            // Find the GlanceId for this widget
             val manager = GlanceAppWidgetManager(context)
             val glanceId = manager.getGlanceIdBy(appWidgetId)
 
-            // Update the widget state with the selected medication
             updateAppWidgetState(context, glanceId) { prefs ->
                 prefs[WidgetKeys.MEDICATION_ID] = medication.id
                 prefs[WidgetKeys.MEDICATION_NAME] = medication.name
                 prefs[WidgetKeys.MEDICATION_DOSAGE] = medication.dosage
             }
 
-            // Update widget display
             MedTrackerWidget().updateAll(context)
 
-            // Signal success
             val resultValue = Intent().putExtra(
                 AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId
             )
@@ -148,10 +241,13 @@ private fun ConfigScreen(
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Add a medication in the app first",
+                    "Add a medication in the app first, then come back to set up this widget.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(horizontal = 32.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
             }
         } else {
@@ -161,12 +257,19 @@ private fun ConfigScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 item {
-                    Text(
-                        "Select which medication this widget will track:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
+                    Column(modifier = Modifier.padding(bottom = 8.dp)) {
+                        Text(
+                            "Tap a medication below to bind it to this widget.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Once set up, tapping the widget on your home screen will quickly log a dose.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
                 }
 
                 items(medications) { med ->

@@ -19,6 +19,7 @@ data class AddEditState(
     val defaultAmount: String = "",
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
+    val isDeleted: Boolean = false,
     val error: String? = null
 )
 
@@ -77,6 +78,16 @@ class AddEditMedicationViewModel @Inject constructor(
                 repository.addMedication(medication)
             }
             _state.update { it.copy(isLoading = false, isSaved = true) }
+        }
+    }
+
+    fun deleteMedication() {
+        val medId = editingMedId ?: return
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            val med = repository.getMedicationById(medId) ?: return@launch
+            repository.deleteMedication(med)
+            _state.update { it.copy(isLoading = false, isDeleted = true) }
         }
     }
 }

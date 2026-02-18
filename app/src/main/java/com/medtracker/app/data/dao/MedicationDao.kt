@@ -53,8 +53,18 @@ interface MedicationDao {
     @Delete
     suspend fun deleteLog(log: MedicationLog)
 
-    @Query("SELECT * FROM medication_logs WHERE medicationId = :medicationId ORDER BY takenAt DESC")
+    @Query("SELECT * FROM medication_logs WHERE medicationId = :medicationId ORDER BY takenAt DESC LIMIT 50")
     fun getLogsForMedication(medicationId: Long): Flow<List<MedicationLog>>
+
+    @Query("""
+        DELETE FROM medication_logs WHERE id IN (
+            SELECT id FROM medication_logs
+            WHERE medicationId = :medicationId
+            ORDER BY takenAt DESC
+            LIMIT -1 OFFSET 50
+        )
+    """)
+    suspend fun pruneOldLogs(medicationId: Long)
 
     @Query("SELECT * FROM medication_logs WHERE medicationId = :medicationId ORDER BY takenAt DESC LIMIT 1")
     suspend fun getLastLogForMedication(medicationId: Long): MedicationLog?

@@ -1,5 +1,6 @@
 package com.medtracker.app.widget
 
+import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -14,9 +15,9 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
-import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
@@ -33,7 +34,6 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.room.Room
 import com.medtracker.app.data.database.MedTrackerDatabase
-import com.medtracker.app.MainActivity
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -73,10 +73,21 @@ class MedTrackerWidget : GlanceAppWidget() {
             updateAppWidgetState(context, glanceId) { prefs ->
                 val medId = prefs[WidgetKeys.MEDICATION_ID] ?: return@updateAppWidgetState
                 val dao = db.medicationDao()
-                val med = dao.getMedicationById(medId) ?: return@updateAppWidgetState
+                val med = dao.getMedicationById(medId)
+
+                if (med == null) {
+                    // Medication was deleted — clear the widget so it shows "Setup"
+                    prefs.remove(WidgetKeys.MEDICATION_ID)
+                    prefs.remove(WidgetKeys.MEDICATION_NAME)
+                    prefs.remove(WidgetKeys.MEDICATION_DOSAGE)
+                    prefs.remove(WidgetKeys.LAST_TAKEN_AT)
+                    prefs.remove(WidgetKeys.LAST_AMOUNT)
+                    return@updateAppWidgetState
+                }
+
                 val lastLog = dao.getLastLogForMedication(medId)
 
-                // Always update all fields
+                // Always update all fields (handles renames automatically)
                 prefs[WidgetKeys.MEDICATION_NAME] = med.name
                 prefs[WidgetKeys.MEDICATION_DOSAGE] = med.dosage
 
@@ -85,7 +96,6 @@ class MedTrackerWidget : GlanceAppWidget() {
                     prefs[WidgetKeys.LAST_TAKEN_AT] = lastLog.takenAt
                     prefs[WidgetKeys.LAST_AMOUNT] = lastLog.amount
                 } else {
-                    // Clear the keys if no log exists
                     prefs.remove(WidgetKeys.LAST_TAKEN_AT)
                     prefs.remove(WidgetKeys.LAST_AMOUNT)
                 }
@@ -119,7 +129,8 @@ class MedTrackerWidget : GlanceAppWidget() {
                             )
                         )
                     } else {
-                        actionStartActivity<MainActivity>()
+                        // No medication bound — open config to let user pick one
+                        actionRunCallback<OpenConfigAction>()
                     }
                 ),
             verticalAlignment = Alignment.CenterVertically,
@@ -127,7 +138,7 @@ class MedTrackerWidget : GlanceAppWidget() {
         ) {
             // Pill icon
             Text(
-                text = "💊",
+                text = "\uD83D\uDC8A",
                 style = TextStyle(
                     fontSize = 24.sp
                 )
@@ -148,7 +159,14 @@ class MedTrackerWidget : GlanceAppWidget() {
                 // Last taken time
                 Text(
                     text = if (lastTakenAt != null) {
-                        SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(lastTakenAt))
+                        val diff = System.currentTimeMillis() - lastTakenAt
+                        val dayMs = 24 * 60 * 60 * 1000L
+                        when {
+                            diff < dayMs -> SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(lastTakenAt))
+                            diff < 2 * dayMs -> "Yesterday"
+                            diff < 6 * dayMs -> SimpleDateFormat("EEE h:mm a", Locale.getDefault()).format(Date(lastTakenAt))
+                            else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(lastTakenAt))
+                        }
                     } else "Never",
                     style = TextStyle(
                         fontSize = 10.sp,
@@ -158,7 +176,7 @@ class MedTrackerWidget : GlanceAppWidget() {
                 )
             } else {
                 Text(
-                    text = "Med",
+                    text = "Setup",
                     style = TextStyle(
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
@@ -167,7 +185,7 @@ class MedTrackerWidget : GlanceAppWidget() {
                     maxLines = 1
                 )
                 Text(
-                    text = "Tap",
+                    text = "Tap here",
                     style = TextStyle(
                         fontSize = 10.sp,
                         color = ColorProvider(Color(0xFFCCCCCC))
@@ -179,6 +197,9 @@ class MedTrackerWidget : GlanceAppWidget() {
     }
 }
 
+/**
+ * Tapping a configured widget opens the Take Medication screen.
+ */
 class TakeMedicationAction : ActionCallback {
     override suspend fun onAction(
         context: Context,
@@ -191,6 +212,27 @@ class TakeMedicationAction : ActionCallback {
             Intent.ACTION_VIEW,
             Uri.parse("medtracker://take/$medId")
         ).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        context.startActivity(intent)
+    }
+}
+
+/**
+ * Tapping an unconfigured widget opens WidgetConfigActivity with the
+ * correct appWidgetId so the user can pick a medication to bind.
+ */
+class OpenConfigAction : ActionCallback {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters
+    ) {
+        val manager = GlanceAppWidgetManager(context)
+        val appWidgetId = manager.getAppWidgetId(glanceId)
+
+        val intent = Intent(context, WidgetConfigActivity::class.java).apply {
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         context.startActivity(intent)

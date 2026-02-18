@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Schedule
@@ -44,7 +46,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.medtracker.app.data.entity.MedicationLog
 import com.medtracker.app.ui.components.formatDate
-import com.medtracker.app.ui.components.formatDateTime
 import com.medtracker.app.ui.components.formatTime
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,6 +57,9 @@ fun HistoryScreen(
 ) {
     val medication by viewModel.medication.collectAsStateWithLifecycle()
     val logs by viewModel.logs.collectAsStateWithLifecycle()
+    val totalCount by viewModel.totalCount.collectAsStateWithLifecycle()
+    val currentPage by viewModel.currentPage.collectAsStateWithLifecycle()
+    val totalPages by viewModel.totalPages.collectAsStateWithLifecycle()
 
     LaunchedEffect(medicationId) {
         viewModel.load(medicationId)
@@ -68,7 +72,7 @@ fun HistoryScreen(
                     Column {
                         Text(medication?.name ?: "History")
                         Text(
-                            "${logs.size} dose${if (logs.size != 1) "s" else ""} recorded",
+                            "$totalCount dose${if (totalCount != 1) "s" else ""} recorded",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -82,7 +86,7 @@ fun HistoryScreen(
             )
         }
     ) { padding ->
-        if (logs.isEmpty()) {
+        if (totalCount == 0) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -104,36 +108,90 @@ fun HistoryScreen(
                 )
             }
         } else {
-            // Group logs by date
-            val groupedLogs = logs.groupBy { formatDate(it.takenAt) }
-
-            LazyColumn(
-                modifier = Modifier.padding(padding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
             ) {
-                groupedLogs.forEach { (date, dateLogs) ->
-                    item(key = "header_$date") {
+                // Log list
+                val groupedLogs = logs.groupBy { formatDate(it.takenAt) }
+
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    groupedLogs.forEach { (date, dateLogs) ->
+                        item(key = "header_${date}_$currentPage") {
+                            Text(
+                                text = date,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+
+                        items(
+                            items = dateLogs,
+                            key = { it.id }
+                        ) { log ->
+                            SwipeToDismissLogItem(
+                                log = log,
+                                onDelete = { viewModel.deleteLog(log) }
+                            )
+                        }
+
+                        item(key = "spacer_${date}_$currentPage") {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+                }
+
+                // Pagination controls
+                if (totalPages > 1) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = { viewModel.previousPage() },
+                            enabled = currentPage > 0
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                contentDescription = "Previous page",
+                                tint = if (currentPage > 0)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.outline
+                            )
+                        }
+
                         Text(
-                            text = date,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(vertical = 8.dp)
+                            text = "Page ${currentPage + 1} of $totalPages",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp)
                         )
-                    }
 
-                    items(
-                        items = dateLogs,
-                        key = { it.id }
-                    ) { log ->
-                        SwipeToDismissLogItem(
-                            log = log,
-                            onDelete = { viewModel.deleteLog(log) }
-                        )
+                        IconButton(
+                            onClick = { viewModel.nextPage() },
+                            enabled = currentPage < totalPages - 1
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Next page",
+                                tint = if (currentPage < totalPages - 1)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.outline
+                            )
+                        }
                     }
-
-                    item { Spacer(modifier = Modifier.height(8.dp)) }
                 }
             }
         }
