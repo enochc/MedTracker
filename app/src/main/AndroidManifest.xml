@@ -45,7 +45,8 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.medtracker.app.ACTION_WIDGET_PINNED" />
+                <action android:name="com.maxvonamos.medtracker.app.ACTION_WIDGET_PINNED" />
+                <action android:name="com.maxvonamos.medtracker.app.ACTION_WIDGET_PINNED" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

@@ -9,7 +9,7 @@
     android:resizeMode="none"
     android:widgetCategory="home_screen|keyguard"
     android:updatePeriodMillis="1800000"
-    android:configure="com.medtracker.app.widget.WidgetConfigActivity"
+    android:configure="com.maxvonamos.medtracker.app.widget.WidgetConfigActivity"
     android:widgetFeatures="reconfigurable|configuration_optional"
     android:description="@string/widget_description"
     android:previewLayout="@layout/widget_preview"

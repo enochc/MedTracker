@@ -1,0 +1,315 @@
+package com.maxvonamos.medtracker.app.widget
+
+import android.appwidget.AppWidgetManager
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Medication
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.appwidget.updateAll
+import androidx.room.Room
+import com.maxvonamos.medtracker.app.data.database.MedTrackerDatabase
+import com.maxvonamos.medtracker.app.data.entity.Medication
+import com.maxvonamos.medtracker.app.ui.theme.MedTrackerTheme
+import kotlinx.coroutines.launch
+
+class WidgetConfigActivity : ComponentActivity() {
+
+    companion object {
+        private const val PREFS_NAME = "widget_pending_config"
+        private const val KEY_PENDING_MED_ID = "pending_med_id"
+        private const val KEY_PENDING_MED_NAME = "pending_med_name"
+        private const val KEY_PENDING_MED_DOSAGE = "pending_med_dosage"
+        private const val KEY_PENDING_LAST_TAKEN = "pending_last_taken"
+        private const val KEY_PENDING_LAST_AMOUNT = "pending_last_amount"
+
+        /**
+         * Store a pending medication so the next widget config auto-configures.
+         * Called from HomeScreen's pinWidget before requestPinGlanceAppWidget.
+         */
+        fun setPendingMedication(
+            context: Context,
+            medId: Long,
+            medName: String,
+            medDosage: String,
+            lastTakenAt: Long?,
+            lastAmount: String?
+        ) {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putLong(KEY_PENDING_MED_ID, medId)
+                .putString(KEY_PENDING_MED_NAME, medName)
+                .putString(KEY_PENDING_MED_DOSAGE, medDosage)
+                .apply {
+                    if (lastTakenAt != null) putLong(KEY_PENDING_LAST_TAKEN, lastTakenAt)
+                    else remove(KEY_PENDING_LAST_TAKEN)
+                    if (lastAmount != null) putString(KEY_PENDING_LAST_AMOUNT, lastAmount)
+                    else remove(KEY_PENDING_LAST_AMOUNT)
+                }
+                .apply()
+        }
+
+        fun consumePendingMedication(context: Context): PendingMedConfig? {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val medId = prefs.getLong(KEY_PENDING_MED_ID, 0L)
+            if (medId == 0L) return null
+
+            val config = PendingMedConfig(
+                medId = medId,
+                medName = prefs.getString(KEY_PENDING_MED_NAME, "") ?: "",
+                medDosage = prefs.getString(KEY_PENDING_MED_DOSAGE, "") ?: "",
+                lastTakenAt = if (prefs.contains(KEY_PENDING_LAST_TAKEN)) prefs.getLong(KEY_PENDING_LAST_TAKEN, 0L) else null,
+                lastAmount = prefs.getString(KEY_PENDING_LAST_AMOUNT, null)
+            )
+
+            // Clear pending state
+            prefs.edit().clear().apply()
+            return config
+        }
+    }
+
+    data class PendingMedConfig(
+        val medId: Long,
+        val medName: String,
+        val medDosage: String,
+        val lastTakenAt: Long?,
+        val lastAmount: String?
+    )
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        // Set CANCELED result initially — if user backs out, widget won't be created
+        setResult(RESULT_CANCELED)
+
+        val appWidgetId = intent?.extras?.getInt(
+            AppWidgetManager.EXTRA_APPWIDGET_ID,
+            AppWidgetManager.INVALID_APPWIDGET_ID
+        ) ?: AppWidgetManager.INVALID_APPWIDGET_ID
+
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+            finish()
+            return
+        }
+
+        // Check if there's a pending medication from the "Pin to Home" flow
+        val pending = consumePendingMedication(this)
+        if (pending != null) {
+            // Auto-configure with the medication that was selected in the app
+            configureWidgetFromPending(appWidgetId, pending)
+            return
+        }
+
+        setContent {
+            MedTrackerTheme {
+                ConfigScreen(
+                    appWidgetId = appWidgetId,
+                    onMedicationSelected = { medication ->
+                        configureWidget(appWidgetId, medication)
+                    }
+                )
+            }
+        }
+    }
+
+    private fun configureWidgetFromPending(appWidgetId: Int, pending: PendingMedConfig) {
+        val context = this
+
+        kotlinx.coroutines.MainScope().launch {
+            val manager = GlanceAppWidgetManager(context)
+            val glanceId = manager.getGlanceIdBy(appWidgetId)
+
+            updateAppWidgetState(context, glanceId) { prefs ->
+                prefs[WidgetKeys.MEDICATION_ID] = pending.medId
+                prefs[WidgetKeys.MEDICATION_NAME] = pending.medName
+                prefs[WidgetKeys.MEDICATION_DOSAGE] = pending.medDosage
+                if (pending.lastTakenAt != null) {
+                    prefs[WidgetKeys.LAST_TAKEN_AT] = pending.lastTakenAt
+                }
+                if (pending.lastAmount != null) {
+                    prefs[WidgetKeys.LAST_AMOUNT] = pending.lastAmount
+                }
+            }
+
+            MedTrackerWidget().updateAll(context)
+
+            val resultValue = Intent().putExtra(
+                AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId
+            )
+            setResult(RESULT_OK, resultValue)
+            finish()
+        }
+    }
+
+    private fun configureWidget(appWidgetId: Int, medication: Medication) {
+        val context = this
+
+        kotlinx.coroutines.MainScope().launch {
+            val manager = GlanceAppWidgetManager(context)
+            val glanceId = manager.getGlanceIdBy(appWidgetId)
+
+            updateAppWidgetState(context, glanceId) { prefs ->
+                prefs[WidgetKeys.MEDICATION_ID] = medication.id
+                prefs[WidgetKeys.MEDICATION_NAME] = medication.name
+                prefs[WidgetKeys.MEDICATION_DOSAGE] = medication.dosage
+            }
+
+            MedTrackerWidget().updateAll(context)
+
+            val resultValue = Intent().putExtra(
+                AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId
+            )
+            setResult(RESULT_OK, resultValue)
+            finish()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ConfigScreen(
+    appWidgetId: Int,
+    onMedicationSelected: (Medication) -> Unit
+) {
+    val context = LocalContext.current
+    val db = Room.databaseBuilder(
+        context, MedTrackerDatabase::class.java, "medtracker.db"
+    ).build()
+
+    val medications by db.medicationDao().getActiveMedications()
+        .collectAsState(initial = emptyList())
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Choose Medication") }
+            )
+        }
+    ) { padding ->
+        if (medications.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    Icons.Default.Medication,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.outline
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "No medications found",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "Add a medication in the app first, then come back to set up this widget.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(horizontal = 32.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.padding(padding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    Column(modifier = Modifier.padding(bottom = 8.dp)) {
+                        Text(
+                            "Tap a medication below to bind it to this widget.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Once set up, tapping the widget on your home screen will quickly log a dose.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+
+                items(medications) { med ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onMedicationSelected(med) },
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Medication,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = med.name,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                if (med.dosage.isNotBlank()) {
+                                    Text(
+                                        text = med.dosage,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

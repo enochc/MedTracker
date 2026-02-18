@@ -228,7 +228,7 @@ Navigate to **Release → Production**
 
 Once approved:
 - Your app will be live on Google Play
-- Share your Play Store link: `https://play.google.com/store/apps/details?id=com.medtracker.app`
+- Share your Play Store link: `https://play.google.com/store/apps/details?id=com.maxvonamos.medtracker.app`
 - Monitor the Play Console for user reviews and crash reports
 
 ## 🎉 Congratulations!

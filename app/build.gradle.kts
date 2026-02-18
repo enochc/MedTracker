@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.medtracker.app"
+    namespace = "com.maxvonamos.medtracker.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.medtracker.app"
+        applicationId = "com.maxvonamos.medtracker.app"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
