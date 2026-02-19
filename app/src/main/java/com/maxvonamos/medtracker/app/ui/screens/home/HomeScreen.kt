@@ -61,6 +61,7 @@ import com.maxvonamos.medtracker.app.data.entity.MedicationWithLastLog
 import com.maxvonamos.medtracker.app.ui.components.formatTimeAgo
 import com.maxvonamos.medtracker.app.widget.MedTrackerWidget
 import com.maxvonamos.medtracker.app.widget.MedTrackerWidgetReceiver
+import com.maxvonamos.medtracker.app.widget.WidgetConfigActivity
 import com.maxvonamos.medtracker.app.widget.WidgetKeys
 import kotlinx.coroutines.launch
 
@@ -322,6 +323,17 @@ private fun MedicationCard(
 private suspend fun pinWidget(context: Context, medWithLog: MedicationWithLastLog) {
     val manager = GlanceAppWidgetManager(context)
     val med = medWithLog.medication
+
+    // Store pending medication so WidgetConfigActivity can auto-configure
+    // if the system launches it (belt-and-suspenders with previewState)
+    WidgetConfigActivity.setPendingMedication(
+        context = context,
+        medId = med.id,
+        medName = med.name,
+        medDosage = med.dosage,
+        lastTakenAt = medWithLog.lastTakenAt,
+        lastAmount = medWithLog.lastAmount
+    )
 
     // Create a callback that runs once the widget is pinned
     val successCallback = Intent(context, MedTrackerWidgetReceiver::class.java).apply {

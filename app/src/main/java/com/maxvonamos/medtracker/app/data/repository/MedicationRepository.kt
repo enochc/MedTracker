@@ -68,6 +68,9 @@ class MedicationRepository @Inject constructor(
     suspend fun getLastLogForMedication(medicationId: Long): MedicationLog? =
         dao.getLastLogForMedication(medicationId)
 
-    suspend fun deleteLog(log: MedicationLog) =
+    suspend fun deleteLog(log: MedicationLog) {
         dao.deleteLog(log)
+        // Refresh widgets so the "last taken" label updates
+        WidgetUpdater.refreshAllWidgets(context)
+    }
 }

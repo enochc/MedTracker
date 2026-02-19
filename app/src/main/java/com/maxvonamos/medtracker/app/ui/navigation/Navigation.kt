@@ -5,8 +5,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.dialog
 import androidx.navigation.navArgument
-import androidx.navigation.navDeepLink
 import com.maxvonamos.medtracker.app.ui.screens.addmedication.AddEditMedicationScreen
 import com.maxvonamos.medtracker.app.ui.screens.history.HistoryScreen
 import com.maxvonamos.medtracker.app.ui.screens.home.HomeScreen
@@ -65,12 +65,9 @@ fun MedTrackerNavHost(navController: NavHostController) {
             )
         }
 
-        composable(
+        dialog(
             route = Routes.TAKE_MEDICATION,
-            arguments = listOf(navArgument("medId") { type = NavType.LongType }),
-            deepLinks = listOf(
-                navDeepLink { uriPattern = "medtracker://take/{medId}" }
-            )
+            arguments = listOf(navArgument("medId") { type = NavType.LongType })
         ) {
             TakeMedicationScreen(
                 medicationId = it.arguments?.getLong("medId") ?: 0L,

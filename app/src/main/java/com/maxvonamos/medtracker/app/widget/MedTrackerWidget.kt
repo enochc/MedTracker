@@ -3,7 +3,6 @@ package com.maxvonamos.medtracker.app.widget
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.text.format.DateUtils
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -229,10 +228,10 @@ class TakeMedicationAction : ActionCallback {
     ) {
         val medId = parameters[ActionParameters.Key<Long>("med_id")] ?: return
 
-        val intent = Intent(
-            Intent.ACTION_VIEW,
-            Uri.parse("medtracker://take/$medId")
-        ).apply {
+        // Explicit intent to TakeMedicationActivity (transparent dialog-only activity)
+        // so the main app doesn't launch behind it
+        val intent = Intent(context, Class.forName("com.maxvonamos.medtracker.app.TakeMedicationActivity")).apply {
+            putExtra("med_id", medId)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         context.startActivity(intent)

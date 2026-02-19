@@ -2,14 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application
-        android:name=".MedTrackerApp"
+        android:name="com.maxvonamos.medtracker.app.MedTrackerApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.MedTracker">
 
-        <!-- Main Activity with deep link support -->
+        <!-- Main Activity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -18,16 +18,17 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
-            <!-- Deep link for widget "Take" action -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data
-                    android:scheme="medtracker"
-                    android:host="take" />
-            </intent-filter>
         </activity>
+
+        <!-- Transparent activity for widget "Take" action — no main app behind it -->
+        <activity
+            android:name=".TakeMedicationActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MedTracker.Transparent"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:launchMode="singleInstance" />
 
         <!-- Widget Configuration Activity -->
         <activity
@@ -45,7 +46,6 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.maxvonamos.medtracker.app.ACTION_WIDGET_PINNED" />
                 <action android:name="com.maxvonamos.medtracker.app.ACTION_WIDGET_PINNED" />
             </intent-filter>
             <meta-data
