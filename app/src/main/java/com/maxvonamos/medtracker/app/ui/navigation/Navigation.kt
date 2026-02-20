@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.dialog
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.maxvonamos.medtracker.app.ui.screens.addmedication.AddEditMedicationScreen
 import com.maxvonamos.medtracker.app.ui.screens.history.HistoryScreen
 import com.maxvonamos.medtracker.app.ui.screens.home.HomeScreen
@@ -22,6 +23,8 @@ object Routes {
     fun editMedication(medId: Long) = "edit_medication/$medId"
     fun history(medId: Long) = "history/$medId"
     fun takeMedication(medId: Long) = "take_medication/$medId"
+    
+    val historyDeepLink = "medtracker://history/{medId}"
 }
 
 @Composable
@@ -57,7 +60,8 @@ fun MedTrackerNavHost(navController: NavHostController) {
 
         composable(
             route = Routes.HISTORY,
-            arguments = listOf(navArgument("medId") { type = NavType.LongType })
+            arguments = listOf(navArgument("medId") { type = NavType.LongType }),
+            deepLinks = listOf(navDeepLink { uriPattern = Routes.historyDeepLink })
         ) {
             HistoryScreen(
                 medicationId = it.arguments?.getLong("medId") ?: 0L,
