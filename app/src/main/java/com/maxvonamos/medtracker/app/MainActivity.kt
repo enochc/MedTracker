@@ -7,7 +7,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.navigation.NavController
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.navigation.compose.rememberNavController
 import com.maxvonamos.medtracker.app.ui.navigation.MedTrackerNavHost
 import com.maxvonamos.medtracker.app.ui.navigation.Routes
@@ -35,13 +38,23 @@ class MainActivity : ComponentActivity() {
             MedTrackerTheme {
                 val navController = rememberNavController()
                 
-                // Track if we were launched via a deep link to history
-                // If so, we want to finish the activity when backing out of history
+                // Track if we have already reached the history screen
+                var historyVisited by remember { mutableStateOf(false) }
+                
                 navController.addOnDestinationChangedListener { _, destination, _ ->
-                    val isAtHome = destination.route == Routes.HOME
+                    val route = destination.route
+                    
+                    // Check if we are currently on the history screen
+                    if (route?.startsWith("history/") == true) {
+                        historyVisited = true
+                    }
+                    
+                    // If we are back at Home AND we were launched with a history deep link 
+                    // AND we have already shown history, then finish the activity.
+                    val isAtHome = route == Routes.HOME
                     val hasHistoryDeepLink = intent?.data?.toString()?.startsWith("medtracker://history/") == true
                     
-                    if (isAtHome && hasHistoryDeepLink) {
+                    if (isAtHome && hasHistoryDeepLink && historyVisited) {
                         finish()
                     }
                 }
