@@ -33,9 +33,9 @@ class MedicationRepository @Inject constructor(
 
     suspend fun updateMedication(medication: Medication) {
         dao.updateMedication(medication)
-        // Push name/dosage changes to any widgets tracking this medication
+        // Push name/nickname/dosage changes to any widgets tracking this medication
         WidgetUpdater.pushMedicationUpdate(
-            context, medication.id, medication.name, medication.dosage
+            context, medication.id, medication.name, medication.nickname, medication.dosage
         )
     }
 

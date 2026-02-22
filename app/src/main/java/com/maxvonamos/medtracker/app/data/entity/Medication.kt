@@ -8,6 +8,7 @@ data class Medication(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val name: String,
+    val nickname: String = "",      // used for widgets/reminders for privacy
     val dosage: String = "",       // e.g. "500mg", "2 tablets"
     val notes: String = "",
     val trackAmount: Boolean = false, // whether to prompt for amount when logging

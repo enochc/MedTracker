@@ -20,6 +20,7 @@ import javax.inject.Inject
 
 data class AddEditState(
     val name: String = "",
+    val nickname: String = "",
     val dosage: String = "",
     val notes: String = "",
     val trackAmount: Boolean = false,
@@ -51,6 +52,7 @@ class AddEditMedicationViewModel @Inject constructor(
             _state.update {
                 it.copy(
                     name = med.name,
+                    nickname = med.nickname,
                     dosage = med.dosage,
                     notes = med.notes,
                     trackAmount = med.trackAmount,
@@ -67,6 +69,7 @@ class AddEditMedicationViewModel @Inject constructor(
     }
 
     fun updateName(name: String) = _state.update { it.copy(name = name, error = null) }
+    fun updateNickname(nickname: String) = _state.update { it.copy(nickname = nickname) }
     fun updateDosage(dosage: String) = _state.update { it.copy(dosage = dosage) }
     fun updateNotes(notes: String) = _state.update { it.copy(notes = notes) }
 
@@ -146,6 +149,7 @@ class AddEditMedicationViewModel @Inject constructor(
             val medication = Medication(
                 id = editingMedId ?: 0,
                 name = current.name.trim(),
+                nickname = current.nickname.trim(),
                 dosage = current.dosage.trim(),
                 notes = current.notes.trim(),
                 trackAmount = current.trackAmount,

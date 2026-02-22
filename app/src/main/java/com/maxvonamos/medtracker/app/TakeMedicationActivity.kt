@@ -3,11 +3,11 @@ package com.maxvonamos.medtracker.app
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.view.WindowInsets
-import android.view.WindowInsetsController
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -34,10 +34,6 @@ class TakeMedicationActivity : ComponentActivity() {
         
         // Hide system bars completely for a clean transparent overlay
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.insetsController?.let { controller ->
-            controller.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
-            controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
 
         // Support both explicit intent (from widget) and deep link URI (medtracker://take/{id})
         val medId = intent?.getLongExtra("med_id", 0L).let { if (it == 0L) null else it }
@@ -76,6 +72,12 @@ class TakeMedicationActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+
+        // Configure insets AFTER setContent so the DecorView is initialized
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
     }
 }

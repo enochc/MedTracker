@@ -71,9 +71,11 @@ object NotificationHelper {
             "Time for your medication"
         }
 
+        val displayName = if (medication.nickname.isNotBlank()) medication.nickname else medication.name
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(medication.name)
+            .setContentTitle(displayName)
             .setContentText(contentText)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)

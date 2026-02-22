@@ -46,6 +46,7 @@ import java.util.Locale
 object WidgetKeys {
     val MEDICATION_ID = longPreferencesKey("medication_id")
     val MEDICATION_NAME = stringPreferencesKey("medication_name")
+    val MEDICATION_NICKNAME = stringPreferencesKey("medication_nickname")
     val MEDICATION_DOSAGE = stringPreferencesKey("medication_dosage")
     val LAST_TAKEN_AT = longPreferencesKey("last_taken_at")
     val LAST_AMOUNT = stringPreferencesKey("last_amount")
@@ -83,6 +84,7 @@ class MedTrackerWidget : GlanceAppWidget() {
                     // Medication was deleted — clear the widget so it shows "Setup"
                     prefs.remove(WidgetKeys.MEDICATION_ID)
                     prefs.remove(WidgetKeys.MEDICATION_NAME)
+                    prefs.remove(WidgetKeys.MEDICATION_NICKNAME)
                     prefs.remove(WidgetKeys.MEDICATION_DOSAGE)
                     prefs.remove(WidgetKeys.LAST_TAKEN_AT)
                     prefs.remove(WidgetKeys.LAST_AMOUNT)
@@ -93,6 +95,7 @@ class MedTrackerWidget : GlanceAppWidget() {
 
                 // Always update all fields (handles renames automatically)
                 prefs[WidgetKeys.MEDICATION_NAME] = med.name
+                prefs[WidgetKeys.MEDICATION_NICKNAME] = med.nickname
                 prefs[WidgetKeys.MEDICATION_DOSAGE] = med.dosage
 
                 // Clear or set the last taken time
@@ -119,7 +122,10 @@ class MedTrackerWidget : GlanceAppWidget() {
         val state = currentState<androidx.datastore.preferences.core.Preferences>()
         val medId = state[WidgetKeys.MEDICATION_ID]
         val medName = state[WidgetKeys.MEDICATION_NAME] ?: "No medication"
+        val medNickname = state[WidgetKeys.MEDICATION_NICKNAME]
         val lastTakenAt = state[WidgetKeys.LAST_TAKEN_AT]
+
+        val displayName = if (!medNickname.isNullOrBlank()) medNickname else medName
 
         Column(
             modifier = GlanceModifier
@@ -148,10 +154,10 @@ class MedTrackerWidget : GlanceAppWidget() {
                 )
             )
 
-            // Medication name
+            // Medication name (or nickname)
             if (medId != null) {
                 Text(
-                    text = medName,
+                    text = displayName,
                     style = TextStyle(
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
@@ -285,6 +291,7 @@ class MedTrackerWidgetReceiver : GlanceAppWidgetReceiver() {
                         // Set labels immediately so the first render isn't blank/generic
                         if (med != null) {
                             prefs[WidgetKeys.MEDICATION_NAME] = med.name
+                            prefs[WidgetKeys.MEDICATION_NICKNAME] = med.nickname
                             prefs[WidgetKeys.MEDICATION_DOSAGE] = med.dosage
                         }
                     }

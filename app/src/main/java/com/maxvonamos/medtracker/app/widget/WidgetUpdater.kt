@@ -53,10 +53,10 @@ object WidgetUpdater {
     }
 
     /**
-     * Directly push a name/dosage change into all widget instances
+     * Directly push a name/nickname/dosage change into all widget instances
      * tracking the given medication, then re-render.
      */
-    suspend fun pushMedicationUpdate(context: Context, medicationId: Long, name: String, dosage: String) {
+    suspend fun pushMedicationUpdate(context: Context, medicationId: Long, name: String, nickname: String, dosage: String) {
         val manager = GlanceAppWidgetManager(context)
         val glanceIds = manager.getGlanceIds(MedTrackerWidget::class.java)
 
@@ -65,6 +65,7 @@ object WidgetUpdater {
                 val widgetMedId = prefs[WidgetKeys.MEDICATION_ID] ?: return@updateAppWidgetState
                 if (widgetMedId == medicationId) {
                     prefs[WidgetKeys.MEDICATION_NAME] = name
+                    prefs[WidgetKeys.MEDICATION_NICKNAME] = nickname
                     prefs[WidgetKeys.MEDICATION_DOSAGE] = dosage
                 }
             }
@@ -94,6 +95,7 @@ object WidgetUpdater {
                     matchedIds.add(glanceId)
                     prefs.remove(WidgetKeys.MEDICATION_ID)
                     prefs.remove(WidgetKeys.MEDICATION_NAME)
+                    prefs.remove(WidgetKeys.MEDICATION_NICKNAME)
                     prefs.remove(WidgetKeys.MEDICATION_DOSAGE)
                     prefs.remove(WidgetKeys.LAST_TAKEN_AT)
                     prefs.remove(WidgetKeys.LAST_AMOUNT)

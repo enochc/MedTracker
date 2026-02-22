@@ -189,6 +189,18 @@ fun AddEditMedicationScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
+                value = state.nickname,
+                onValueChange = viewModel::updateNickname,
+                label = { Text("Nickname") },
+                placeholder = { Text("e.g. Vitamin B") },
+                supportingText = { Text("Used for home screen widgets and reminders for added security.") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
                 value = state.dosage,
                 onValueChange = viewModel::updateDosage,
                 label = { Text("Dosage") },

@@ -12,7 +12,7 @@ import com.maxvonamos.medtracker.app.data.entity.MedicationReminder
 
 @Database(
     entities = [Medication::class, MedicationLog::class, MedicationReminder::class],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class MedTrackerDatabase : RoomDatabase() {
@@ -36,6 +36,12 @@ abstract class MedTrackerDatabase : RoomDatabase() {
                     )
                 """.trimIndent())
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_medication_reminders_medicationId ON medication_reminders(medicationId)")
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE medications ADD COLUMN nickname TEXT NOT NULL DEFAULT ''")
             }
         }
     }

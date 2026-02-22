@@ -24,7 +24,10 @@ object AppModule {
             MedTrackerDatabase::class.java,
             "medtracker.db"
         )
-            .addMigrations(MedTrackerDatabase.MIGRATION_1_2)
+            .addMigrations(
+                MedTrackerDatabase.MIGRATION_1_2,
+                MedTrackerDatabase.MIGRATION_2_3
+            )
             .build()
 
     @Provides
