@@ -1,5 +1,8 @@
 package com.maxvonamos.medtracker.app.ui.screens.addmedication
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -59,6 +63,7 @@ fun AddEditMedicationScreen(
     val isEditing = medicationId != null
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showReminderDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     LaunchedEffect(medicationId) {
         medicationId?.let { viewModel.loadMedication(it) }
@@ -95,6 +100,34 @@ fun AddEditMedicationScreen(
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
                     Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (state.showPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissPermissionDialog() },
+            title = { Text("Exact Alarms Permission") },
+            text = {
+                Text("To ensure you receive medication reminders exactly on time, MedTracker needs permission to set exact alarms. Otherwise, reminders may be slightly delayed.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.dismissPermissionDialog()
+                        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                            data = Uri.fromParts("package", context.packageName, null)
+                        }
+                        context.startActivity(intent)
+                    }
+                ) {
+                    Text("Open Settings")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissPermissionDialog() }) {
+                    Text("Later")
                 }
             }
         )

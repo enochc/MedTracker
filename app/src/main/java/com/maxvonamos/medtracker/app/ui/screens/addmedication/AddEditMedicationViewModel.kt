@@ -1,6 +1,8 @@
 package com.maxvonamos.medtracker.app.ui.screens.addmedication
 
+import android.app.AlarmManager
 import android.content.Context
+import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.maxvonamos.medtracker.app.data.dao.ReminderDao
@@ -26,7 +28,8 @@ data class AddEditState(
     val isSaved: Boolean = false,
     val isDeleted: Boolean = false,
     val error: String? = null,
-    val reminders: List<MedicationReminder> = emptyList()
+    val reminders: List<MedicationReminder> = emptyList(),
+    val showPermissionDialog: Boolean = false
 )
 
 @HiltViewModel
@@ -67,7 +70,24 @@ class AddEditMedicationViewModel @Inject constructor(
     fun updateDosage(dosage: String) = _state.update { it.copy(dosage = dosage) }
     fun updateNotes(notes: String) = _state.update { it.copy(notes = notes) }
 
+    private fun hasExactAlarmPermission(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            return alarmManager.canScheduleExactAlarms()
+        }
+        return true
+    }
+
+    fun dismissPermissionDialog() {
+        _state.update { it.copy(showPermissionDialog = false) }
+    }
+
     fun addReminder(result: ReminderDialogResult) {
+        if (!hasExactAlarmPermission()) {
+            _state.update { it.copy(showPermissionDialog = true) }
+            // We continue anyway because ReminderScheduler now has a fallback
+        }
+
         val medId = editingMedId ?: return
         viewModelScope.launch {
             val reminder = MedicationReminder(
@@ -91,8 +111,13 @@ class AddEditMedicationViewModel @Inject constructor(
     }
 
     fun toggleReminder(reminder: MedicationReminder) {
+        val newState = !reminder.isEnabled
+        if (newState && !hasExactAlarmPermission()) {
+            _state.update { it.copy(showPermissionDialog = true) }
+        }
+
         viewModelScope.launch {
-            val updated = reminder.copy(isEnabled = !reminder.isEnabled)
+            val updated = reminder.copy(isEnabled = newState)
             reminderDao.updateReminder(updated)
             if (updated.isEnabled) {
                 ReminderScheduler.scheduleAlarm(context, updated)
