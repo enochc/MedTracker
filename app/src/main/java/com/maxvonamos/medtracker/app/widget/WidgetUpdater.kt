@@ -36,8 +36,13 @@ object WidgetUpdater {
             updateAppWidgetState(context, glanceId) { prefs ->
                 val widgetMedId = prefs[WidgetKeys.MEDICATION_ID] ?: return@updateAppWidgetState
                 if (widgetMedId == medicationId) {
-                    prefs[WidgetKeys.LAST_TAKEN_AT] = takenAt
-                    prefs[WidgetKeys.LAST_AMOUNT] = amount
+                    if (takenAt > 0) {
+                        prefs[WidgetKeys.LAST_TAKEN_AT] = takenAt
+                        prefs[WidgetKeys.LAST_AMOUNT] = amount
+                    } else {
+                        prefs.remove(WidgetKeys.LAST_TAKEN_AT)
+                        prefs.remove(WidgetKeys.LAST_AMOUNT)
+                    }
                 }
             }
         }

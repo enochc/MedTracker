@@ -69,7 +69,32 @@ class MedicationRepository @Inject constructor(
 
     suspend fun deleteLog(log: MedicationLog) {
         dao.deleteLog(log)
-        // Refresh widgets so the "last taken" label updates
-        WidgetUpdater.refreshAllWidgets(context)
+        // After deleting a log, re-query the latest log to update the widget correctly
+        val lastLog = dao.getLastLogForMedication(log.medicationId)
+        if (lastLog != null) {
+            WidgetUpdater.pushLastTaken(
+                context,
+                log.medicationId,
+                lastLog.takenAt,
+                lastLog.amount
+            )
+        } else {
+            // No logs left for this medication - push 0 to trigger "Never"
+            WidgetUpdater.pushLastTaken(context, log.medicationId, 0L, "")
+        }
+    }
+
+    suspend fun updateLog(log: MedicationLog) {
+        dao.updateLog(log)
+        // Check if this was the most recent log
+        val lastLog = dao.getLastLogForMedication(log.medicationId)
+        if (lastLog?.id == log.id) {
+            WidgetUpdater.pushLastTaken(
+                context,
+                log.medicationId,
+                log.takenAt,
+                log.amount
+            )
+        }
     }
 }
