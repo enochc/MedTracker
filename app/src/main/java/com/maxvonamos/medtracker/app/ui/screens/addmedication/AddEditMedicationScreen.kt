@@ -3,6 +3,7 @@ package com.maxvonamos.medtracker.app.ui.screens.addmedication
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -63,6 +64,7 @@ fun AddEditMedicationScreen(
     val isEditing = medicationId != null
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showReminderDialog by remember { mutableStateOf(false) }
+    var reminderToEdit by remember { mutableStateOf<MedicationReminder?>(null) }
     val context = LocalContext.current
 
     LaunchedEffect(medicationId) {
@@ -133,13 +135,22 @@ fun AddEditMedicationScreen(
         )
     }
 
-    if (showReminderDialog) {
+    if (showReminderDialog || reminderToEdit != null) {
         ReminderDialog(
-            onDismiss = { showReminderDialog = false },
-            onConfirm = { result ->
-                viewModel.addReminder(result)
+            onDismiss = { 
                 showReminderDialog = false
-            }
+                reminderToEdit = null
+            },
+            onConfirm = { result ->
+                viewModel.saveReminder(result, reminderToEdit?.id)
+                showReminderDialog = false
+                reminderToEdit = null
+            },
+            initialHour = reminderToEdit?.hour ?: 8,
+            initialMinute = reminderToEdit?.minute ?: 0,
+            initialIntervalType = reminderToEdit?.intervalType ?: MedicationReminder.DAILY,
+            initialDaysOfWeek = reminderToEdit?.daysOfWeek ?: 0,
+            isEdit = reminderToEdit != null
         )
     }
 
@@ -246,7 +257,8 @@ fun AddEditMedicationScreen(
                         ReminderRow(
                             reminder = reminder,
                             onToggle = { viewModel.toggleReminder(reminder) },
-                            onDelete = { viewModel.deleteReminder(reminder) }
+                            onDelete = { viewModel.deleteReminder(reminder) },
+                            onEdit = { reminderToEdit = reminder }
                         )
                     }
                 }
@@ -289,7 +301,8 @@ fun AddEditMedicationScreen(
 private fun ReminderRow(
     reminder: MedicationReminder,
     onToggle: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onEdit: () -> Unit
 ) {
     val cal = Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, reminder.hour)
@@ -317,6 +330,7 @@ private fun ReminderRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onEdit() }
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically

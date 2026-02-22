@@ -4,10 +4,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -27,8 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.maxvonamos.medtracker.app.data.entity.MedicationReminder
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.selection.selectable
 
 data class ReminderDialogResult(
     val hour: Int,
@@ -45,7 +47,8 @@ fun ReminderDialog(
     initialHour: Int = 8,
     initialMinute: Int = 0,
     initialIntervalType: String = MedicationReminder.DAILY,
-    initialDaysOfWeek: Int = 0
+    initialDaysOfWeek: Int = 0,
+    isEdit: Boolean = false
 ) {
     val timePickerState = rememberTimePickerState(
         initialHour = initialHour,
@@ -72,32 +75,37 @@ fun ReminderDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Reminder") },
+        title = { Text(if (isEdit) "Edit Reminder" else "Add Reminder") },
         text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            ) {
                 // Time picker
-                TimePicker(state = timePickerState)
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    "Frequency",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                TimePicker(
+                    state = timePickerState,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Frequency radio buttons
+                Text(
+                    "Frequency",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                // Frequency radio buttons - Reduced vertical padding
                 intervalOptions.forEach { (type, label) ->
                     Row(
                         modifier = Modifier
+                            .height(30.dp)
                             .fillMaxWidth()
                             .selectable(
                                 selected = intervalType == type,
                                 onClick = { intervalType = type }
-                            )
-                            .padding(vertical = 4.dp),
+                            ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
@@ -107,7 +115,7 @@ fun ReminderDialog(
                         Text(
                             text = label,
                             style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(start = 8.dp)
+                            modifier = Modifier.padding(start = 4.dp)
                         )
                     }
                 }
@@ -115,9 +123,16 @@ fun ReminderDialog(
                 // Day-of-week chips (only when Specific Days is selected)
                 if (intervalType == MedicationReminder.SPECIFIC_DAYS) {
                     Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Select Days",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
                     FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(0.dp)
                     ) {
                         dayLabels.forEach { (bit, label) ->
                             val selected = daysOfWeek and bit != 0

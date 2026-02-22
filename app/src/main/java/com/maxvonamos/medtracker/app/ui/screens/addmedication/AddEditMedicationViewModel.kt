@@ -82,24 +82,31 @@ class AddEditMedicationViewModel @Inject constructor(
         _state.update { it.copy(showPermissionDialog = false) }
     }
 
-    fun addReminder(result: ReminderDialogResult) {
+    fun saveReminder(result: ReminderDialogResult, reminderId: Long? = null) {
         if (!hasExactAlarmPermission()) {
             _state.update { it.copy(showPermissionDialog = true) }
-            // We continue anyway because ReminderScheduler now has a fallback
         }
 
         val medId = editingMedId ?: return
         viewModelScope.launch {
             val reminder = MedicationReminder(
+                id = reminderId ?: 0,
                 medicationId = medId,
                 hour = result.hour,
                 minute = result.minute,
                 intervalType = result.intervalType,
-                daysOfWeek = result.daysOfWeek
+                daysOfWeek = result.daysOfWeek,
+                isEnabled = true // Reset to enabled on edit/add
             )
-            val id = reminderDao.insertReminder(reminder)
-            val saved = reminderDao.getReminderById(id) ?: return@launch
-            ReminderScheduler.scheduleAlarm(context, saved)
+            
+            if (reminderId == null) {
+                val id = reminderDao.insertReminder(reminder)
+                val saved = reminderDao.getReminderById(id) ?: return@launch
+                ReminderScheduler.scheduleAlarm(context, saved)
+            } else {
+                reminderDao.updateReminder(reminder)
+                ReminderScheduler.scheduleAlarm(context, reminder)
+            }
         }
     }
 
