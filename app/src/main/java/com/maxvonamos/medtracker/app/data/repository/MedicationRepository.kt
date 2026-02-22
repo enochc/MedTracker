@@ -45,8 +45,7 @@ class MedicationRepository @Inject constructor(
         dao.deleteMedication(medication)
     }
 
-    suspend fun logMedication(medicationId: Long, amount: String = "", note: String = ""): Long {
-        val takenAt = System.currentTimeMillis()
+    suspend fun logMedication(medicationId: Long, takenAt: Long = System.currentTimeMillis(), amount: String = "", note: String = ""): Long {
         val id = dao.insertLog(
             MedicationLog(
                 medicationId = medicationId,

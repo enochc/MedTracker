@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
     <application
         android:name="com.maxvonamos.medtracker.app.MedTrackerApp"
         android:allowBackup="true"
@@ -59,6 +63,25 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/med_tracker_widget_info" />
+        </receiver>
+
+        <!-- Alarm Receiver for medication reminders -->
+        <receiver
+            android:name=".notification.AlarmReceiver"
+            android:exported="false" />
+
+        <!-- Notification action handler (Taken / Skip) -->
+        <receiver
+            android:name=".notification.NotificationActionReceiver"
+            android:exported="false" />
+
+        <!-- Boot receiver to reschedule alarms after reboot -->
+        <receiver
+            android:name=".notification.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
         </receiver>
 
     </application>

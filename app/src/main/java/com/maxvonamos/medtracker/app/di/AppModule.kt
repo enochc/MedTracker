@@ -3,6 +3,7 @@ package com.maxvonamos.medtracker.app.di
 import android.content.Context
 import androidx.room.Room
 import com.maxvonamos.medtracker.app.data.dao.MedicationDao
+import com.maxvonamos.medtracker.app.data.dao.ReminderDao
 import com.maxvonamos.medtracker.app.data.database.MedTrackerDatabase
 import dagger.Module
 import dagger.Provides
@@ -22,9 +23,15 @@ object AppModule {
             context,
             MedTrackerDatabase::class.java,
             "medtracker.db"
-        ).build()
+        )
+            .addMigrations(MedTrackerDatabase.MIGRATION_1_2)
+            .build()
 
     @Provides
     fun provideDao(database: MedTrackerDatabase): MedicationDao =
         database.medicationDao()
+
+    @Provides
+    fun provideReminderDao(database: MedTrackerDatabase): ReminderDao =
+        database.reminderDao()
 }

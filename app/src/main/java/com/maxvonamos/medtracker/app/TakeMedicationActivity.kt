@@ -3,9 +3,11 @@ package com.maxvonamos.medtracker.app
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -30,9 +32,12 @@ class TakeMedicationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Ensure the activity takes up the full screen (transparently) 
-        // to avoid status bar glitches when tapping.
-        enableEdgeToEdge()
+        // Hide system bars completely for a clean transparent overlay
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.insetsController?.let { controller ->
+            controller.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
+            controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
 
         // Support both explicit intent (from widget) and deep link URI (medtracker://take/{id})
         val medId = intent?.getLongExtra("med_id", 0L).let { if (it == 0L) null else it }
@@ -62,10 +67,10 @@ class TakeMedicationActivity : ComponentActivity() {
                         medicationId = medId,
                         onDone = { finish() },
                         onViewHistory = { id ->
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("medtracker://history/$id"))
-                            intent.`package` = packageName
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                            startActivity(intent)
+                            val historyIntent = Intent(Intent.ACTION_VIEW, Uri.parse("medtracker://history/$id"))
+                            historyIntent.`package` = packageName
+                            historyIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            startActivity(historyIntent)
                             finish()
                         }
                     )

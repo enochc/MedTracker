@@ -17,6 +17,7 @@ data class TakeMedState(
     val lastLog: MedicationLog? = null,
     val amount: String = "",
     val note: String = "",
+    val selectedTime: Long = System.currentTimeMillis(),
     val isLogging: Boolean = false,
     val isLogged: Boolean = false
 )
@@ -37,7 +38,8 @@ class TakeMedicationViewModel @Inject constructor(
                 it.copy(
                     medication = med,
                     lastLog = lastLog,
-                    amount = med.defaultAmount
+                    amount = med.dosage,
+                    selectedTime = System.currentTimeMillis()
                 )
             }
         }
@@ -45,6 +47,7 @@ class TakeMedicationViewModel @Inject constructor(
 
     fun updateAmount(amount: String) = _state.update { it.copy(amount = amount) }
     fun updateNote(note: String) = _state.update { it.copy(note = note) }
+    fun updateSelectedTime(timeMillis: Long) = _state.update { it.copy(selectedTime = timeMillis) }
 
     fun confirm() {
         val med = _state.value.medication ?: return
@@ -52,6 +55,7 @@ class TakeMedicationViewModel @Inject constructor(
             _state.update { it.copy(isLogging = true) }
             repository.logMedication(
                 medicationId = med.id,
+                takenAt = _state.value.selectedTime,
                 amount = _state.value.amount.trim(),
                 note = _state.value.note.trim()
             )

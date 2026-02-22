@@ -232,7 +232,7 @@ class TakeMedicationAction : ActionCallback {
         // so the main app doesn't launch behind it
         val intent = Intent(context, Class.forName("com.maxvonamos.medtracker.app.TakeMedicationActivity")).apply {
             putExtra("med_id", medId)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         context.startActivity(intent)
     }
